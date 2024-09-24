@@ -1,0 +1,32 @@
+* WEEK ONE
+** monday - wednesday 
+make movement, collision and eventually combat mechanics.
+
+* WEEK 2
+**
+
+focus on combat mechanics and enemy generation/ movement/ mechanics regarding combat.
+
+* Week 2, 
+room generation + maze structure. samtligen försök att fixa en ordentlig colission detection åt alla sidor av väggarna. 
+
+* Week 3
+
+Focus purely on error fixing regarding prior added element like enemies and their pathfinding, roomgeneration with maze etc.
+
+Add chests and equippable items to strengthen the player. additionally add 3-5 enemy types with range, melee etc etc. Maybe even a different type of weapon to create new movesets etc for player. 
+
+Variation and spiritualization of the game to make it more fun.
+
+
+Week 4. 
+
+Either continue bug fixing, room generation etc or begin with several new additions like lock and keys for rooms, and even bosses if that could work. 
+
+Add quality of life changes like a healthbar, visible stats (on player) and healthbars on enemies when targeted. 
+
+Potentially if time exists add elements like conditions to movesets, like slowed if hp < 50% etc, and a attack boost on hp<25%. or even a stamina bar for added difficulty
+
+additionally add semi graphical add-ons like blinking red around screen when close to death, more watchable shadows, cool flashlight functinality regarding maze and darkness etc etc. 
+
+(if you come far enough continue code for eventual good project for a resume etc)
