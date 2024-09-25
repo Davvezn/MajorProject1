@@ -4,7 +4,8 @@
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
 
-#define PLAYER_MAX_ARROWS 550
+#define PLAYER_MAX_ARROWS 500
+#define MAX_MELEES 500
 /*
 typedef struct Player {
     int position_x;
@@ -21,7 +22,15 @@ typedef struct Bullet {
     Color color;
 } arrow;
 
-void shootArrow (arrow arrows[],Vector2 position, Vector2 direction) {
+typedef struct Melee {
+    Vector2 position;
+    Vector2 direction;
+    Vector2 size;
+    bool active;
+    Color color;
+} melee;
+
+void shootArrow(arrow arrows[],Vector2 position, Vector2 direction) {
     for (int i = 0; i < PLAYER_MAX_ARROWS; i++) {
         if (!arrows[i].active) {
             arrows[i].position = position;
@@ -53,6 +62,32 @@ void DrawArrow(arrow arrows[]) {
     }
 }
 
+void MeleeAttack(melee melees[], Vector2 position, Vector2 direction, Vector2 size/*might be able to add enemies etc here later*/) {
+    for ( int i = 0; i < MAX_MELEES; i++) {
+        if (!melees[i].active) {
+            melees[i].position = position;  
+            melees[i].active = true;
+            melees[i].size = size;
+
+            Rectangle meleeArea = {position.x - size.x / 2, position.y - size.y / 2, size.x, size.y };
+
+            break;
+        }
+    }
+}
+
+void updateAttack() {
+    //duration etc 
+}
+
+void DrawAttackAoe(melee melees[]) {
+    for (int i = 0; i < MAX_MELEES; i++) {
+        if (melees[i].active) {
+            DrawRectangleV(melees[i].position,  melees[i].size, BLUE);
+        }
+    }
+}
+
 int main() {
 
     Vector2 playerPosition = { WINDOWWIDTH/2.0f, WINDOWHEIGHT/2.0f };
@@ -66,6 +101,7 @@ int main() {
     double dodgeDuration = 0.2;
 
     // attack logics
+    melee melees[MAX_MELEES] = {0};
 
     arrow arrows[PLAYER_MAX_ARROWS] = {0};
 
@@ -105,6 +141,11 @@ int main() {
             shootArrow(arrows, playerPosition, arrowSpeed);
         }
 
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            Vector2 meleeSize = { 50.0f, 20.0f};
+            MeleeAttack(melees, playerPosition, direction, meleeSize);
+        }
+
         // dodge logic
         if (IsKeyPressed(KEY_SPACE) && Vector2Length(direction) > 0) { // checks if space is active addiotinally if any other direction input is being used
             isDodging = true;
@@ -136,6 +177,8 @@ int main() {
             playerPosition.y =  WINDOWHEIGHT - 12;
         }
 
+        // add an larger if statement restricting melee attacks when dodging or shooting arrows
+
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -143,6 +186,7 @@ int main() {
 
         DrawCircleV(playerPosition, 12, RED);
         DrawArrow(arrows);
+        DrawAttackAoe(melees);
         EndDrawing();
     }
 
