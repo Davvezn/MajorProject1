@@ -10,12 +10,14 @@
 #define MAX_BLUES 100
 #define MAX_PURPLES 50
 
+#define MAX_ZOMBIES 80
+
 typedef struct Bullet {
     Vector2 position;
     Vector2 speed;
     bool active;
     Color color;
-} Projetile;
+} Projectile;
 
 typedef struct Melee {
     Vector2 position;
@@ -41,7 +43,82 @@ typedef struct Enemies {
     bool active; 
 } enemies;
 
-void shootArrow(Projetile arrows[],Vector2 position, Vector2 direction) {
+Vector2 getRandomSpawnLocation();
+
+void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zombiesToSpawn) {
+    for (int i = 0; i < MAX_ZOMBIES; i++) {
+        if (!Zombie[i].active) {
+            Vector2 randomSpawnLocation = getRandomSpawnLocation();
+            Vector2 randomDirection = Vector2Normalize((Vector2){GetRandomValue(-1,1), GetRandomValue(-1,1)});
+
+            Zombie[i].position = randomSpawnLocation;
+            Zombie[i].speed = Vector2Scale(randomDirection, 6.0f);
+            Zombie[i].HP = 100;
+            Zombie[i].active = true;
+
+            zombiesToSpawn--;
+        }
+        if (zombiesToSpawn <= 0) {
+            break;
+        }
+    }
+}
+
+void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[]) {
+    for ( int i = 0; i < MAX_ZOMBIES; i++) {
+        if (Zombie[i].active) {
+            //logic about zombie movement etc
+            Vector2 direction = Vector2Subtract(playerPosition, Zombie[i].position);
+
+            Vector2 normalizedDirection = Vector2Normalize(direction);
+
+            Zombie[i].position.x += normalizedDirection.x * zombieSpeed * GetFrameTime();
+            Zombie[i].position.y += normalizedDirection.y * zombieSpeed * GetFrameTime();
+
+
+            if (Zombie[i].position.x < 0 + 10) {
+                Zombie[i].position.x = 0 + 10;
+            }
+            if (Zombie[i].position.x >  WINDOWWIDTH - 10) {
+                Zombie[i].position.x = WINDOWWIDTH - 10;
+            }
+            if (Zombie[i].position.y < 0 + 10) {
+                Zombie[i].position.y = 0 + 10;
+            }
+            if (Zombie[i].position.y > WINDOWHEIGHT - 10) {
+                Zombie[i].position.y =  WINDOWHEIGHT - 10;
+            }
+            for (int j = 0; j < PLAYER_MAX_ARROWS; j++) {
+                if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 10)) {
+                    Zombie[i].HP -= 10;
+                    arrows[j].active = false;
+                }
+            }
+
+            for (int r = 0; r < MAX_REDS; r++) {
+                if (red[r].active && CheckCollisionCircles(red[r].position, 40, Zombie[i].position, 20)) {
+                    Zombie[i].HP -= 200;
+                }
+            }
+
+            // hp check
+            if (Zombie[i].HP <=0) {
+                Zombie[i].active = false;
+            }
+
+        }
+    }
+}
+
+void drawZombie(enemies Zombie[]) {
+    for (int i =0; i < MAX_ZOMBIES; i++) {
+        if (Zombie[i].active) {
+            DrawCircleV(Zombie[i].position, 10, GREEN);
+        }
+    }
+}
+
+void shootArrow(Projectile arrows[],Vector2 position, Vector2 direction) {
     for (int i = 0; i < PLAYER_MAX_ARROWS; i++) {
         if (!arrows[i].active) {
             arrows[i].position = position;
@@ -52,7 +129,7 @@ void shootArrow(Projetile arrows[],Vector2 position, Vector2 direction) {
     }
 }
 
-void updateArrow(Projetile arrows[]) {
+void updateArrow(Projectile arrows[]) {
     for (int i = 0; i < PLAYER_MAX_ARROWS; i++) {
         if (arrows[i].active) {
             arrows[i].position.x += arrows[i].speed.x;
@@ -65,10 +142,10 @@ void updateArrow(Projetile arrows[]) {
     }
 }
 
-void DrawArrow(Projetile arrows[]) {
+void DrawArrow(Projectile arrows[]) {
     for (int i = 0; i< PLAYER_MAX_ARROWS; i++) {
         if (arrows[i].active) {
-            DrawCircleV(arrows[i].position, 5, GREEN);
+            DrawCircleV(arrows[i].position, 5, PURPLE);
         }
     }
 }
@@ -92,17 +169,17 @@ void updateRed(Red red[]) {
             red[i].position.y += red[i].speed.y;
 
             
-            if (red[i].position.x < 0 || red[i].position.x > WINDOWWIDTH) {
+            if (red[i].position.x < 10 || red[i].position.x > WINDOWWIDTH - 10) {
                  red[i].speed.x *= -1;
                 red[i].bounces++;
             }
 
-            if (red[i].position.y < 0 || red[i].position.y > WINDOWHEIGHT) {
+            if (red[i].position.y < 10 || red[i].position.y > WINDOWHEIGHT - 10) {
                 red[i].speed.y *= -1;
                 red[i].bounces++;
             }
             
-            if (red[i].bounces >= 10) {
+            if (red[i].bounces >= 4) {
                 red[i].active = false;
             }
         }
@@ -155,6 +232,30 @@ void DrawAttackAoe(melee melees[]) {
     }
 }
 
+Vector2 getRandomSpawnLocation() {
+    Vector2 spawnPosition;
+    int edge = GetRandomValue(0, 3);
+
+    switch (edge) {
+        case 0:
+            spawnPosition.x = 0;
+            spawnPosition.y = GetRandomValue(0, WINDOWHEIGHT);
+            break;
+        case 1:
+            spawnPosition.x = WINDOWWIDTH;
+            spawnPosition.y = GetRandomValue(0, WINDOWHEIGHT);
+            break;
+        case 2:
+            spawnPosition.x = GetRandomValue(0, WINDOWWIDTH);
+            spawnPosition.y = 0;
+            break;
+        case 3:
+            spawnPosition.x = GetRandomValue(0, WINDOWWIDTH );
+            spawnPosition.y = WINDOWHEIGHT;
+    }   
+    return spawnPosition;
+}
+
 int main() {
 
     Vector2 playerPosition = { WINDOWWIDTH/2.0f, WINDOWHEIGHT/2.0f };
@@ -164,29 +265,49 @@ int main() {
     // dodge values
     float dodgeDistance = 10.0f;
     bool isDodging = false;
-    double dodgeTime = 0.0f;
+    double dodgeTime = 0.2f;
     double dodgeDuration = 0.2;
-
-
 
     // attack logics
     float meleeDuration = 0.5f;
 
+    // ability defines
+    Color StaminaBarColor = {37, 206, 209, 100};
+    float lastRed = -10.0;
+    float redCooldownTime = 2.0; //should be 10s
+
+    // enemie defines / logic initiation
+    float Zombie_Speed = 40.0f;
+    float Spawntime = 0.0f;
+    float Spawninterval = 5.0f;
+    int zombiesToSpawn = 10;
+    int ActiveZombies = 0;
+
     melee melees[MAX_MELEES] = {0};
 
-    Projetile arrows[PLAYER_MAX_ARROWS] = {0};
+    Projectile arrows[PLAYER_MAX_ARROWS] = {0};
 
     Red red[MAX_REDS] = {0};
+    enemies Zombie[MAX_ZOMBIES] = {0};
 
     InitWindow( WINDOWWIDTH, WINDOWHEIGHT, "Maze runner");
     SetTargetFPS(60);
+
+
     while (!WindowShouldClose()) {
         Vector2 mousePosition = GetMousePosition();
         Vector2 BulletDirection = Vector2Normalize(Vector2Subtract(mousePosition, playerPosition));
         Vector2 arrowSpeed = {BulletDirection.x * 10.0f, BulletDirection.y * 10.0};
         Vector2 MeleeDirection = Vector2Normalize(Vector2Subtract(mousePosition, playerPosition));
+
+        if (zombiesToSpawn >= 0) {
+            spawnZombies(Zombie, playerPosition, Vector2Zero(), zombiesToSpawn);
+            zombiesToSpawn = 1;
+        }
+        //updates
         updateArrow(arrows);
         updateRed(red);
+        updateZombies(Zombie, playerPosition, Zombie_Speed, arrows, red);
 
         double currentTime = GetTime();
 
@@ -216,7 +337,10 @@ int main() {
         }
 
         if (IsKeyReleased(KEY_E)) {
-            ShootRed(red, playerPosition, arrowSpeed);
+            if (currentTime >= lastRed + redCooldownTime) {
+                ShootRed(red, playerPosition, arrowSpeed);
+                lastRed = currentTime;
+            }
         }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
@@ -254,19 +378,20 @@ int main() {
         if (playerPosition.y > WINDOWHEIGHT - 12) {
             playerPosition.y =  WINDOWHEIGHT - 12;
         }
-
-        // add an larger if statement restricting melee attacks when dodging or shooting arrows
-
+        // Schematic for stamina / mana bar
+        float cooldownPercentage = (currentTime - lastRed) / redCooldownTime;
+        if (cooldownPercentage > 1.0f) cooldownPercentage = 1.0f; // Cap it at 1 (100%)
 
 
         BeginDrawing();
         ClearBackground(BLACK);
 
-
+        drawZombie(Zombie);
+        DrawAttackAoe(melees);
         DrawCircleV(playerPosition, 12, WHITE); // player
         DrawArrow(arrows);
-        DrawAttackAoe(melees);
         DrawRed(red);
+        DrawRectangle(50, 50, 20, (int)(200 * cooldownPercentage), StaminaBarColor); 
         EndDrawing();
     }
 

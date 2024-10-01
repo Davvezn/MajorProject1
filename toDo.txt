@@ -10,6 +10,14 @@ focus on combat mechanics and enemy generation/ movement/ mechanics regarding co
 * Week 2, 
 room generation + maze structure. samtligen försök att fixa en ordentlig colission detection åt alla sidor av väggarna. 
 
+AT HOME, 
+test the collision check between arrow/red and Zombies, inconsistent and bad.
+
+
+
+
+
+
 * Week 3
 
 Focus purely on error fixing regarding prior added element like enemies and their pathfinding, roomgeneration with maze etc.
