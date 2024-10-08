@@ -16,9 +16,9 @@ typedef struct {
 
 #define PLAYER_MAX_ARROWS 500
 #define MAX_MELEES 500
-#define MAX_REDS 90
-#define MAX_BLUES 100
-#define MAX_PURPLES 50
+#define MAX_REDS 10
+#define MAX_BLUES 10
+#define MAX_PURPLES 5
 
 #define MAX_ZOMBIES 100
 
@@ -109,7 +109,7 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
     }
 }
 
-void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[]) {
+void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one) {
     for ( int i = 0; i < MAX_ZOMBIES; i++) {
         if (Zombie[i].active) {
             //logic about zombie movement etc
@@ -134,15 +134,21 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
                 Zombie[i].position.y =  WINDOWHEIGHT - 10;
             }
 
+            if ((Zombie[i].position.x == playerPosition.x + 20.0f || Zombie[i].position.x == playerPosition.x - 20.0f) || (Zombie[i].position.y == playerPosition.y -20.0f || Zombie[i].position.y == playerPosition.y - 20.0f)) {
+                player_one.HP -= 10;
+                    if (player_one.HP <= 0) {
+                        player_one.active = false;
+                    }
+            } 
             for (int j = 0; j < PLAYER_MAX_ARROWS; j++) {
-                if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 10)) {
+                if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 5)) {
                     Zombie[i].HP -= 20;
                     arrows[j].active = false;
                 }
             }
 
             for (int r = 0; r < MAX_REDS; r++) {
-                if (red[r].active && CheckCollisionCircles(red[r].position, 40, Zombie[i].position, 20)) {
+                if (red[r].active && CheckCollisionCircles(red[r].position, 20, Zombie[i].position, 20)) {
                     Zombie[i].HP -= 200;
                 }
             }
@@ -151,7 +157,6 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
             if (Zombie[i].HP <=0) {
                 Zombie[i].active = false;
             }
-
         }
     }
 }
@@ -290,8 +295,6 @@ void updateAttack(melee melees[], enemies Zombie[]) {
                     } 
                 }
             }
-
-
         }
     }
 }
@@ -333,7 +336,7 @@ Vector2 getRandomSpawnLocation() {
 
 int main() {
 
-    Player player_one = {100, true, { WINDOWWIDTH/2, WINDOWHEIGHT/2}, {7.5f,7.5f}, WHITE};
+    Player player_one = {10, true, { WINDOWWIDTH/2, WINDOWHEIGHT/2}, {7.5f,7.5f}, WHITE};
     float BaseSpeed = 7.5f;
     float SprintMultiplier = 1.5f;
 
@@ -381,7 +384,7 @@ int main() {
         updateAttack(melees, Zombie);
         updateArrow(arrows);
         updateRed(red);
-        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red);
+        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one);
 
         double currentTime = GetTime();
 
@@ -424,6 +427,10 @@ int main() {
             MeleeAttack(melees, player_one.position, MeleeDirection, meleeSize);
         }
 
+        if (IsKeyPressed(KEY_ESCAPE)) { //simple exit funtion on esc
+            CloseWindow();
+        }
+
         // dodge logic
         if (IsKeyPressed(KEY_SPACE) && Vector2Length(direction) > 0) { // checks if space is active addiotinally if any other direction input is being used
             isDodging = true;
@@ -456,6 +463,9 @@ int main() {
         float cooldownPercentage = (currentTime - lastRed) / redCooldownTime;
         if (cooldownPercentage > 1.0f) cooldownPercentage = 1.0f; // Cap it at 1 (100%)
 
+        if (player_one.active == false) {
+            CloseWindow();
+        }
 
         BeginDrawing();
         ClearBackground(BLACK);

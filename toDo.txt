@@ -19,12 +19,8 @@ test the collision check between arrow/red and Zombies, inconsistent and bad.
 
 
 * Week 3
-
-Focus purely on error fixing regarding prior added element like enemies and their pathfinding, roomgeneration with maze etc.
-
-Add chests and equippable items to strengthen the player. additionally add 3-5 enemy types with range, melee etc etc. Maybe even a different type of weapon to create new movesets etc for player. 
-
-Variation and spiritualization of the game to make it more fun.
+Error fixing and code structure work, combat fix and enemy spawn rate. Skapa 2 mer enemy types (zombie/Skeleton and Orc maybe). Add experience points and leveling system (math increase to make leveling harder and harder)
+Maybe even inventory (temporary space) stored in .txt file where it reads what items you possess or have that can boost player damage etc. maybe remake how spells work and LEVEL GUARD SPELLS (only make available after x levels).
 
 
 Week 4. 
