@@ -20,13 +20,22 @@ test the collision check between arrow/red and Zombies, inconsistent and bad.
 
 * Week 3
 Error fixing and code structure work, combat fix and enemy spawn rate. Skapa 2 mer enemy types (zombie/Skeleton and Orc maybe). Add experience points and leveling system (math increase to make leveling harder and harder)
+
+Grouping system, tex zombie groupar till orc,gör spawnrate mer bearable i början, introducera XP och levels.
+
 Maybe even inventory (temporary space) stored in .txt file where it reads what items you possess or have that can boost player damage etc. maybe remake how spells work and LEVEL GUARD SPELLS (only make available after x levels).
 
 
+
+
 Week 4. 
+STAMINA on sprint and dodge (maybe attacks too)
 
 Either continue bug fixing, room generation etc or begin with several new additions like lock and keys for rooms, and even bosses if that could work. 
 
+
+
+prob after week 5 (inlämning)
 Add quality of life changes like a healthbar, visible stats (on player) and healthbars on enemies when targeted. 
 
 Potentially if time exists add elements like conditions to movesets, like slowed if hp < 50% etc, and a attack boost on hp<25%. or even a stamina bar for added difficulty
