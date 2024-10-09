@@ -336,7 +336,10 @@ Vector2 getRandomSpawnLocation() {
 
 int main() {
 
-    Player player_one = {10, true, { WINDOWWIDTH/2, WINDOWHEIGHT/2}, {7.5f,7.5f}, WHITE};
+    Player player_one = {100, true, { WINDOWWIDTH/2, WINDOWHEIGHT/2}, {7.5f,7.5f}, WHITE};
+    int max_hp = 100;
+    Color back_ground_bar = {79,79,79, 155};
+    Color hp_bar_color = {5, 181, 41, 155};
     float BaseSpeed = 7.5f;
     float SprintMultiplier = 1.5f;
 
@@ -350,9 +353,9 @@ int main() {
     float meleeDuration = 0.5f;
 
     // ability defines
-    Color StaminaBarColor = {37, 206, 209, 100};
+    Color ManaBarColor = {201, 0, 20, 100};
     float lastRed = -10.0;
-    float redCooldownTime = 2.0; //should be 10s
+    float redCooldownTime = 10.0; //should be 10s
 
     // enemie defines / logic initiation
     float Zombie_Speed = 40.0f;
@@ -463,6 +466,8 @@ int main() {
         float cooldownPercentage = (currentTime - lastRed) / redCooldownTime;
         if (cooldownPercentage > 1.0f) cooldownPercentage = 1.0f; // Cap it at 1 (100%)
 
+        float healthPrecent = (float)player_one.HP / max_hp;
+
         if (player_one.active == false) {
             CloseWindow();
         }
@@ -475,7 +480,9 @@ int main() {
         DrawCircleV(player_one.position, 12, WHITE); // player
         DrawArrow(arrows);
         DrawRed(red);
-        DrawRectangle(50, 50, 20, (int)(200 * cooldownPercentage), StaminaBarColor); 
+        DrawRectangle(10, 65, (int)(200 * cooldownPercentage), 20, ManaBarColor);
+        DrawRectangle(10, 10,400,40, back_ground_bar);
+        DrawRectangle(10, 10, (int)(400 * healthPrecent),40, hp_bar_color);
         EndDrawing();
     }
 
