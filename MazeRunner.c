@@ -60,6 +60,7 @@ typedef struct Enemies {
     Vector2 position;
     Vector2 speed;
     Color color;
+    int exp_on_kill;
     bool active; 
 } enemies;
 
@@ -97,10 +98,13 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
             Vector2 randomSpawnLocation = getRandomSpawnLocation();
             Vector2 randomDirection = Vector2Normalize((Vector2){GetRandomValue(-1,1), GetRandomValue(-1,1)});
 
+            Color orc_color = (Color){44, 105, 58, 255};
+
             Orcs[i].position = randomSpawnLocation;
             Orcs[i].speed = Vector2Scale(randomDirection, 6.0f);
             Orcs[i].HP = 1000;
             Orcs[i].active = true;
+            Orcs[i].color = orc_color;
 
             orcs_to_spawn--;
         }
@@ -110,11 +114,15 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
     }
 }
 
-void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[]) {
+void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[]) {
     for (int i = 0; i < MAX_ORCS; i++) {
         if (Orcs[i].active) {
             Vector2 orcDirection = Vector2Subtract(playerPosition, Orcs[i].position); //minimizes vector between orc pos and player pos.
             Vector2 orcNormalizedDirection = Vector2Normalize(orcDirection);
+
+            Vector2 knockback_direction = Vector2Normalize(Vector2Subtract(Orcs[i].position, red[i].position));
+            Vector2 bounce_direction = Vector2Negate(knockback_direction);
+            float knockback_Strength = 20.0f;
 
             int orc_speed = 20;
 
@@ -123,7 +131,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
 
             //border collision 
             if (Orcs[i].position.x > WINDOWWIDTH - 20) {
-                Orcs[i].position.x = WINDOWWIDTH + 20;
+                Orcs[i].position.x = WINDOWWIDTH - 20;
             }
             if (Orcs[i].position.x < 0 + 20) {
                 Orcs[i].position.x = 0 + 20;
@@ -132,7 +140,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
                 Orcs[i].position.y = 0 + 20;
             }
             if (Orcs[i].position.y > WINDOWHEIGHT - 20) {
-                Orcs[i].position.y = WINDOWHEIGHT + 20;
+                Orcs[i].position.y = WINDOWHEIGHT - 20;
             }
 
             if (CheckCollisionCircles(Orcs[i].position, 20, playerPosition, 12)) {
@@ -148,11 +156,27 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
             for (int r = 0; r < MAX_REDS; r++) {
                 if (red[r].active && CheckCollisionCircles(Orcs[i].position, 29, red[r].position, 20)) {
                     Orcs[i].HP -= 100;
+
+                    Orcs[i].position = Vector2Add(Orcs[i].position, Vector2Scale(bounce_direction, knockback_Strength));
+
                 }
+            }
+
+            for (int a = 0; a < PLAYER_MAX_ARROWS; a++) {   
+                if (arrows[i].active && CheckCollisionCircles(Orcs[i].position, 40, arrows[i].position, 20)) {
+                    Orcs[i].HP -= 10;
+
+                    arrows[a].active = false;
+                }
+
             }
 
             if (Orcs[i].HP <= 0) {
                 Orcs[i].active = false;
+            } 
+            if (Orcs[i].HP <= 500) {
+                Color orc_low_HP = (Color){186, 22, 22, 255};
+                Orcs[i].color = orc_low_HP;
             }
         }
     }
@@ -161,7 +185,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
 void drawOrcs(enemies Orcs[]) {
     for (int i = 0; i< MAX_ORCS; i++) {
         if (Orcs[i].active) {
-            DrawCircleV(Orcs[i].position, 40, GRAY);
+            DrawCircleV(Orcs[i].position, 40, Orcs[i].color);
         }
     }
 }
@@ -364,7 +388,7 @@ void MeleeAttack(melee melees[], Vector2 position, Vector2 direction, Vector2 si
     }
 }
 
-void updateAttack(melee melees[], enemies Zombie[]) {
+void updateAttack(melee melees[], enemies Zombie[], enemies Orcs[]) {
     for (int i = 0; i < MAX_MELEES; i++) {
         if (melees[i].active) {
             float rotation = atan2f(melees[i].direction.y, melees[i].direction.x) * (180.0f / PI);
@@ -383,11 +407,20 @@ void updateAttack(melee melees[], enemies Zombie[]) {
             
 
             for (int z = 0; z < MAX_ZOMBIES; z++) {
-                if (IsCircleInRotatedRect(Zombie[z].position, 1, meleeRect)) {
+                if (IsCircleInRotatedRect(Zombie[z].position, 20, meleeRect)) {
                     Zombie[z].HP -= 50;
                     if (Zombie[z].HP <= 0) {
                         Zombie[z].active = false; 
                     } 
+                }
+            }
+
+            for (int O = 0; O < MAX_ORCS; O++) {
+                if (Orcs[O].active && IsCircleInRotatedRect(Orcs[O].position, 40, meleeRect)) {
+                    Orcs[i].HP -= 50;
+                    if (Orcs[O].HP <= 0) {
+                        Orcs[O].active = false;
+                    }
                 }
             }
         }
@@ -486,16 +519,17 @@ int main() {
 
         if (orcs_to_spawn >= 0) {
             spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
+            orcs_to_spawn = 1;
         }
 
 
 
         //updates
-        updateAttack(melees, Zombie);
+        updateAttack(melees, Zombie, Orcs);
         updateArrow(arrows);
         updateRed(red);
         updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one);
-        updateOrcs(Orcs, player_one.position, player_one, red);
+        updateOrcs(Orcs, player_one.position, player_one, red, arrows);
 
         double currentTime = GetTime();
 
