@@ -60,7 +60,7 @@ typedef struct Enemies {
     Vector2 position;
     Vector2 speed;
     Color color;
-    int exp_on_kill;
+    float exp_on_kill;
     bool active; 
 } enemies;
 
@@ -105,6 +105,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
             Orcs[i].HP = 1000;
             Orcs[i].active = true;
             Orcs[i].color = orc_color;
+            Orcs[i].exp_on_kill = 10000.0f;
 
             orcs_to_spawn--;
         }
@@ -114,7 +115,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
     }
 }
 
-void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[]) {
+void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[], float total_exp_earn) {
     for (int i = 0; i < MAX_ORCS; i++) {
         if (Orcs[i].active) {
             Vector2 orcDirection = Vector2Subtract(playerPosition, Orcs[i].position); //minimizes vector between orc pos and player pos.
@@ -173,6 +174,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
 
             if (Orcs[i].HP <= 0) {
                 Orcs[i].active = false;
+                total_exp_earn += Orcs[i].exp_on_kill;
             } 
             if (Orcs[i].HP <= 500) {
                 Color orc_low_HP = (Color){186, 22, 22, 255};
@@ -200,6 +202,7 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
             Zombie[i].speed = Vector2Scale(randomDirection, 6.0f);
             Zombie[i].HP = 100;
             Zombie[i].active = true;
+            Zombie[i].exp_on_kill = 100.0f;
 
             zombiesToSpawn--;
         }
@@ -209,7 +212,7 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
     }
 }
 
-void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one) {
+void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one, float total_exp_earn) {
     for ( int i = 0; i < MAX_ZOMBIES; i++) {
         if (Zombie[i].active) {
             //logic about zombie movement etc
@@ -275,6 +278,7 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
             // hp check
             if (Zombie[i].HP <=0) {
                 Zombie[i].active = false;
+                total_exp_earn += Zombie[i].exp_on_kill;
             }
         }
     }
@@ -471,6 +475,7 @@ int main() {
     Color hp_bar_color ={5, 181, 41, 155};
     float BaseSpeed = 7.5f;
     float SprintMultiplier = 1.5f;
+    float total_exp_earn = 0.0;
 
     // dodge values
     float dodgeDistance = 10.0f;
@@ -528,7 +533,7 @@ int main() {
         updateAttack(melees, Zombie, Orcs);
         updateArrow(arrows);
         updateRed(red);
-        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one);
+        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one, total_exp_earn);
         updateOrcs(Orcs, player_one.position, player_one, red, arrows);
 
         double currentTime = GetTime();
@@ -644,6 +649,7 @@ int main() {
             DrawRectangle(10, 65, (int)(200 * cooldownPercentage), 20, ManaBarColor);
             DrawRectangle(10, 10,400,40, back_ground_bar);
             DrawRectangle(10, 10, (int)(400 * healthPrecent), 40, hp_bar_color);
+            DrawText(TextFormat("Total Exp Earned: %.02f", total_exp_earn), 100, 100, 20, WHITE);
         }
 
         EndDrawing();
