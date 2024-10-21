@@ -11,6 +11,8 @@ typedef struct {
     float rot;
 } rotated_rect_t;
 
+int total_exp_earn = 0;
+
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
 
@@ -60,7 +62,7 @@ typedef struct Enemies {
     Vector2 position;
     Vector2 speed;
     Color color;
-    float exp_on_kill;
+    int exp_on_kill;
     bool active; 
 } enemies;
 
@@ -92,6 +94,18 @@ bool IsCircleInRotatedRect(Vector2 circlePos, float radius, rotated_rect_t rect)
 
 Vector2 getRandomSpawnLocation();
 
+void updateExp(int exp) {
+    total_exp_earn += exp;
+}
+
+void damageEnemies(enemies *enemies, int playerDamage, int total_exp_earn) {
+    enemies->HP -= playerDamage;
+    if (enemies->HP <= 0) {
+        enemies->active = false;
+        total_exp_earn += enemies->exp_on_kill;
+    }
+}
+
 void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_spawn) {
     for (int i = 0; i < MAX_ORCS; i++) {
         if (!Orcs[i].active) {
@@ -105,7 +119,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
             Orcs[i].HP = 1000;
             Orcs[i].active = true;
             Orcs[i].color = orc_color;
-            Orcs[i].exp_on_kill = 10000.0f;
+            Orcs[i].exp_on_kill = 10000;
 
             orcs_to_spawn--;
         }
@@ -115,7 +129,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
     }
 }
 
-void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[], float total_exp_earn) {
+void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[]) {
     for (int i = 0; i < MAX_ORCS; i++) {
         if (Orcs[i].active) {
             Vector2 orcDirection = Vector2Subtract(playerPosition, Orcs[i].position); //minimizes vector between orc pos and player pos.
@@ -156,26 +170,25 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
 
             for (int r = 0; r < MAX_REDS; r++) {
                 if (red[r].active && CheckCollisionCircles(Orcs[i].position, 29, red[r].position, 20)) {
-                    Orcs[i].HP -= 100;
+                    damageEnemies(&Orcs[i], 100, total_exp_earn /*potential hard coding could happen here */);
 
-                    Orcs[i].position = Vector2Add(Orcs[i].position, Vector2Scale(bounce_direction, knockback_Strength));
+
+                    if (Orcs[i].HP > 0) { // makes sure orcs dont bounce when dead
+                        Orcs[i].position = Vector2Add(Orcs[i].position, Vector2Scale(bounce_direction, knockback_Strength));
+                    }
 
                 }
             }
 
-            for (int a = 0; a < PLAYER_MAX_ARROWS; a++) {   
-                if (arrows[i].active && CheckCollisionCircles(Orcs[i].position, 40, arrows[i].position, 20)) {
-                    Orcs[i].HP -= 10;
+            for (int a = 0; a < PLAYER_MAX_ARROWS; a++) {
+                if (arrows[a].active && CheckCollisionCircles(Orcs[i].position, 40, arrows[a].position, 20)) {
+                    damageEnemies(&Orcs[i], 10, Orcs[i].exp_on_kill);
 
                     arrows[a].active = false;
                 }
 
             }
 
-            if (Orcs[i].HP <= 0) {
-                Orcs[i].active = false;
-                total_exp_earn += Orcs[i].exp_on_kill;
-            } 
             if (Orcs[i].HP <= 500) {
                 Color orc_low_HP = (Color){186, 22, 22, 255};
                 Orcs[i].color = orc_low_HP;
@@ -202,7 +215,7 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
             Zombie[i].speed = Vector2Scale(randomDirection, 6.0f);
             Zombie[i].HP = 100;
             Zombie[i].active = true;
-            Zombie[i].exp_on_kill = 100.0f;
+            Zombie[i].exp_on_kill = 100;
 
             zombiesToSpawn--;
         }
@@ -212,7 +225,7 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
     }
 }
 
-void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one, float total_exp_earn) {
+void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one) {
     for ( int i = 0; i < MAX_ZOMBIES; i++) {
         if (Zombie[i].active) {
             //logic about zombie movement etc
@@ -238,7 +251,7 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
             }
             for (int j = 0; j < MAX_ZOMBIES; j++) {
                 if (i != j) {
-                    if (CheckCollisionCircles(Zombie[i].position, 10, Zombie[j].position, 10)) {
+                    if (CheckCollisionCircles(Zombie[i].position, 10, Zombie[j].position, 10)) { //self collision (kinda works)
                         Vector2 direction = Vector2Subtract(Zombie[i].position, Zombie[i].position);
                         float distance = Vector2Length(direction);
 
@@ -264,22 +277,18 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
 
             for (int j = 0; j < PLAYER_MAX_ARROWS; j++) {
                 if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 5)) {
-                    Zombie[i].HP -= 20;
+                    damageEnemies(&Zombie[i], 20, 50);
+
                     arrows[j].active = false;
                 }
             }
 
             for (int r = 0; r < MAX_REDS; r++) {
                 if (red[r].active && CheckCollisionCircles(red[r].position, 20, Zombie[i].position, 20)) {
-                    Zombie[i].HP -= 200;
+                    damageEnemies(&Zombie[i], 200, 100);
                 }
             }
 
-            // hp check
-            if (Zombie[i].HP <=0) {
-                Zombie[i].active = false;
-                total_exp_earn += Zombie[i].exp_on_kill;
-            }
         }
     }
 }
@@ -475,7 +484,6 @@ int main() {
     Color hp_bar_color ={5, 181, 41, 155};
     float BaseSpeed = 7.5f;
     float SprintMultiplier = 1.5f;
-    float total_exp_earn = 0.0;
 
     // dodge values
     float dodgeDistance = 10.0f;
@@ -533,7 +541,7 @@ int main() {
         updateAttack(melees, Zombie, Orcs);
         updateArrow(arrows);
         updateRed(red);
-        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one, total_exp_earn);
+        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one);
         updateOrcs(Orcs, player_one.position, player_one, red, arrows);
 
         double currentTime = GetTime();
@@ -649,7 +657,7 @@ int main() {
             DrawRectangle(10, 65, (int)(200 * cooldownPercentage), 20, ManaBarColor);
             DrawRectangle(10, 10,400,40, back_ground_bar);
             DrawRectangle(10, 10, (int)(400 * healthPrecent), 40, hp_bar_color);
-            DrawText(TextFormat("Total Exp Earned: %.02f", total_exp_earn), 100, 100, 20, WHITE);
+            DrawText(TextFormat("Total Exp Earned: %d", total_exp_earn), 10, 100, 20, WHITE);
         }
 
         EndDrawing();
