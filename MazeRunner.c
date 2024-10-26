@@ -13,6 +13,9 @@ typedef struct {
 
 int total_exp_earn = 0;
 int spawnedZombies = 0;
+float timeBetweenSpawns = 0.5f;
+float spawnTimerZombies = 0.0f;
+int zombiesToSpawn = 0;
 
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
@@ -111,18 +114,6 @@ void damageEnemies(enemies *enemies, int playerDamage) {
         //printf("total exp obtained: %d\n", total_exp_earn);
     }
 }
-
-void respawnEnemies(enemies Zombie[], Vector2 newPosition) {
-    Zombie->position = newPosition;
-    Zombie->HP = 100;
-}
-
-void respawnOrcs(enemies Orcs[], Vector2 newPosition) {
-    Orcs->position = newPosition;
-}
-
-
-
 
 int player_level = 1;
 int exp_to_next_lvl = 100; // 10 zombies
@@ -237,29 +228,25 @@ void drawOrcs(enemies Orcs[]) {
     }
 }
 
-void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zombiesToSpawn) {
-    int spawnedZombies = 0;
-    for (int i = 0; i < MAX_ZOMBIES; i++) {
+void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zombiesToSpawn, int *spawnedZombies) {
+    for (int i = 0; i < MAX_ZOMBIES && *spawnedZombies < zombiesToSpawn; i++) {
         if (!Zombie[i].active) {
-            if (spawnedZombies < zombiesToSpawn) {
-                Vector2 randomSpawnLocation = getRandomSpawnLocation();
-                Vector2 randomDirection = Vector2Normalize((Vector2){GetRandomValue(-1,1), GetRandomValue(-1,1)});
 
-                Zombie[i].position = randomSpawnLocation;
-                Zombie[i].speed = Vector2Scale(randomDirection, 6.0f);
-                Zombie[i].HP = 100;
-                Zombie[i].active = true;
-                Zombie[i].exp_on_kill = 10;
+            Vector2 randomSpawnLocation = getRandomSpawnLocation();
+            Vector2 randomDirection = Vector2Normalize((Vector2){GetRandomValue(-1,1), GetRandomValue(-1,1)});
 
-                spawnedZombies++;
-            } else {
-                break;
-            }
+            Zombie[i].position = randomSpawnLocation;
+            Zombie[i].speed = Vector2Scale(randomDirection, 6.0f);
+            Zombie[i].HP = 100;
+            Zombie[i].active = true;
+            Zombie[i].exp_on_kill = 10;
+
+            (*spawnedZombies)++;
         }
     }
 }
 
-void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one, int spawnedZombies) {
+void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one, int zombiesToSpawn, int *spawnedZombies) {
     for ( int i = 0; i < MAX_ZOMBIES; i++) {
         if (Zombie[i].active) {
             //logic about zombie movement etc
@@ -309,29 +296,36 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
                 }
             }
 
+
             for (int j = 0; j < PLAYER_MAX_ARROWS; j++) {
                 if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 5)) {
                     damageEnemies(&Zombie[i], 20 + 1.5 * player_level);
 
                     arrows[j].active = false;
-                    if (Zombie[i].HP <= 0) {
-                        spawnedZombies--;
-                        Zombie[i].active = false;
-                    }
                 }
             }
 
             for (int r = 0; r < MAX_REDS; r++) {
                 if (red[r].active && CheckCollisionCircles(red[r].position, 20, Zombie[i].position, 20)) {
                     damageEnemies(&Zombie[i], 200 + 1.01 * player_level);
-
-                    if (Zombie[i].HP <= 0) {
-                        spawnedZombies--;
-                        Zombie[i].active = false;
-                    }
                 }
             }
 
+            if (Zombie[i].HP <= 0) {
+                Zombie[i].active = false;
+                (*spawnedZombies)--;
+            }
+
+        }
+    }
+    if (*spawnedZombies < zombiesToSpawn){
+        spawnTimerZombies += GetFrameTime();
+
+        if (spawnTimerZombies >= timeBetweenSpawns) {
+            Vector2 RandomSpawnLocation = getRandomSpawnLocation();
+            spawnZombies(Zombie, RandomSpawnLocation, Vector2Zero(), zombiesToSpawn/*only accounts and respawns set amount*/, spawnedZombies);
+
+            spawnTimerZombies = 0.0f;
         }
     }
 }
@@ -546,7 +540,7 @@ int main() {
     int lastSpawnTime = 0;
 
     //orc logic
-    int orcs_to_spawn = 5;
+    //int orcs_to_spawn = 5;
 
     melee melees[MAX_MELEES] = {0};
     Projectile arrows[PLAYER_MAX_ARROWS] = {0};
@@ -564,31 +558,32 @@ int main() {
         double total_runtime = GetTime();
 
         if (total_runtime >= 1 && lastSpawnTime < 1) {
-            int zombiesToSpawn = 5;
-            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn);
-            //DrawText("It has been 10 seconds", WINDOWWIDTH / 2, WINDOWHEIGHT / 2, 32, RED); troubleshooting 
-            lastSpawnTime = 1;
+            zombiesToSpawn = 5;
+            
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
+            lastSpawnTime = total_runtime;
         }
 
-        if (total_runtime >= 30 && lastSpawnTime < 30) {
+        if (total_runtime >= 10 && lastSpawnTime < 10) {
 
-            int zombiesToSpawn = 15;
+            zombiesToSpawn = 15; // only spawns 15 but doesnt allow 15 to be respawned
             int orcs_to_spawn = 1;
+
             spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
-            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn);
-            lastSpawnTime = 30;
-            // Orc spawn 1
-            // max zombie 15
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
+            lastSpawnTime = total_runtime;
         }
 
         if ( total_runtime >= 60 && lastSpawnTime < 60) {
-            int zombiesToSpawn = 25;
+            zombiesToSpawn = 25;
             int orcs_to_spawn = 3;
 
-            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
-            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn);
+            int TotalZombiesSpawned = zombiesToSpawn + spawnedZombies;
 
-            lastSpawnTime = 60;
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), TotalZombiesSpawned, &spawnedZombies);
+
+            lastSpawnTime = total_runtime;
             // enable red
             // max zombie -> 25
             // orcs -> 3
@@ -619,7 +614,7 @@ int main() {
         updateAttack(melees, Zombie, Orcs);
         updateArrow(arrows);
         updateRed(red);
-        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one, spawnedZombies);
+        updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one, zombiesToSpawn, &spawnedZombies);
         updateOrcs(Orcs, player_one.position, player_one, red, arrows);
         checkLevelUp();
 
