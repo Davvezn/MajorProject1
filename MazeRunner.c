@@ -15,7 +15,11 @@ int total_exp_earn = 0;
 int spawnedZombies = 0;
 float timeBetweenSpawns = 0.5f;
 float spawnTimerZombies = 0.0f;
+float spawnTimerOrcs = 0.0f;
 int zombiesToSpawn = 0;
+int orcs_to_spawn = 0;
+int spawnedOrcs = 0;
+bool melee_active = false;
 
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
@@ -23,7 +27,7 @@ int zombiesToSpawn = 0;
 #define PLAYER_MAX_ARROWS 500
 #define MAX_MELEES 500
 #define MAX_REDS 10
-#define MAX_BLUES 10
+#define MAX_BLUES 10 //future abilities
 #define MAX_PURPLES 5
 
 #define MAX_ZOMBIES 100
@@ -127,11 +131,10 @@ void checkLevelUp() {
     }
 }
 
-void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_spawn) {
-    int spawnedOrcs = 0;
-    for (int i = 0; i < MAX_ORCS; i++) {
+void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_spawn, int *spawnedOrcs) {
+    for (int i = 0; i < MAX_ORCS && *spawnedOrcs < orcs_to_spawn; i++) {
         if (!Orcs[i].active) {
-            if (spawnedOrcs < orcs_to_spawn) {
+            if (*spawnedOrcs < orcs_to_spawn) {
                 Vector2 randomSpawnLocation = getRandomSpawnLocation();
                 Vector2 randomDirection = Vector2Normalize((Vector2){GetRandomValue(-1,1), GetRandomValue(-1,1)});
 
@@ -144,7 +147,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
                 Orcs[i].color = orc_color;
                 Orcs[i].exp_on_kill = 1000;
 
-                spawnedOrcs++;
+                (*spawnedOrcs)++;
             } else {
                 break;
             }
@@ -152,7 +155,7 @@ void spawnOrc(enemies Orcs[], Vector2 position, Vector2 direction, int orcs_to_s
     }
 }
 
-void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[]) {
+void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red red[], Projectile arrows[], int orcs_to_spawn, int *spawnedOrcs) {
     for (int i = 0; i < MAX_ORCS; i++) {
         if (Orcs[i].active) {
             Vector2 orcDirection = Vector2Subtract(playerPosition, Orcs[i].position); //minimizes vector between orc pos and player pos.
@@ -216,6 +219,21 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
                 Color orc_low_HP = (Color){186, 22, 22, 255};
                 Orcs[i].color = orc_low_HP;
             }
+
+            if (Orcs[i].HP <= 0) {
+                Orcs[i].active = false;
+                (*spawnedOrcs)--;
+            }
+        }
+    }
+    if (*spawnedOrcs < orcs_to_spawn){
+        spawnTimerOrcs += GetFrameTime();
+
+        if (spawnTimerOrcs >= timeBetweenSpawns) {
+            Vector2 RandomSpawnLocation = getRandomSpawnLocation();
+            spawnOrc(Orcs, RandomSpawnLocation, Vector2Zero(), orcs_to_spawn, spawnedOrcs);
+
+            spawnTimerOrcs = 0.0f;
         }
     }
 }
@@ -539,9 +557,6 @@ int main() {
     float last_damage_tick = -1.0f;
     int lastSpawnTime = 0;
 
-    //orc logic
-    //int orcs_to_spawn = 5;
-
     melee melees[MAX_MELEES] = {0};
     Projectile arrows[PLAYER_MAX_ARROWS] = {0};
     Red red[MAX_REDS] = {0};
@@ -567,21 +582,19 @@ int main() {
         if (total_runtime >= 10 && lastSpawnTime < 10) {
 
             zombiesToSpawn = 15; // only spawns 15 but doesnt allow 15 to be respawned
-            int orcs_to_spawn = 1;
+            orcs_to_spawn = 1;
 
-            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
             spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
             lastSpawnTime = total_runtime;
         }
 
         if ( total_runtime >= 60 && lastSpawnTime < 60) {
             zombiesToSpawn = 25;
-            int orcs_to_spawn = 3;
+            orcs_to_spawn = 3;
 
-            int TotalZombiesSpawned = zombiesToSpawn + spawnedZombies;
-
-            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn);
-            spawnZombies(Zombie, player_one.position, Vector2Zero(), TotalZombiesSpawned, &spawnedZombies);
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
 
             lastSpawnTime = total_runtime;
             // enable red
@@ -590,21 +603,29 @@ int main() {
         }
 
         if (total_runtime >= 120) {
-            // enable melee
-            // Zombie -> 50
-            // Orcs -> 6
+            zombiesToSpawn = 50;
+            orcs_to_spawn = 5;
+
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
 
         }
 
         if (total_runtime >= 150) {
+            zombiesToSpawn = 75;
+            orcs_to_spawn = 15;
             // disable melee
-            // zomBie -> 80
-            // Orcs -> 15
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
         }
 
         if (total_runtime >= 240) {
-            // Zombie -> 100
-            // Orcs -> 20
+            zombiesToSpawn = 100;
+            orcs_to_spawn = 20;
+            melee_active = true;
+
+            spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
+            spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
         }
 
 
@@ -615,7 +636,7 @@ int main() {
         updateArrow(arrows);
         updateRed(red);
         updateZombies(Zombie, player_one.position, Zombie_Speed, arrows, red, player_one, zombiesToSpawn, &spawnedZombies);
-        updateOrcs(Orcs, player_one.position, player_one, red, arrows);
+        updateOrcs(Orcs, player_one.position, player_one, red, arrows, orcs_to_spawn, &spawnedOrcs);
         checkLevelUp();
 
         double currentTime = GetTime();
@@ -655,8 +676,10 @@ int main() {
         }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            Vector2 meleeSize = { 30.0f, 70.0f}; // size of melee attack
-            MeleeAttack(melees, player_one.position, MeleeDirection, meleeSize);
+            if (melee_active) {
+                Vector2 meleeSize = { 30.0f, 70.0f};
+                MeleeAttack(melees, player_one.position, MeleeDirection, meleeSize);
+            }
         }
 
         if (IsKeyPressed(KEY_L)) {
