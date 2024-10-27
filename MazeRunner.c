@@ -20,6 +20,7 @@ int zombiesToSpawn = 0;
 int orcs_to_spawn = 0;
 int spawnedOrcs = 0;
 bool melee_active = false;
+bool arrow_pierce = false;
 
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
@@ -120,7 +121,7 @@ void damageEnemies(enemies *enemies, int playerDamage) {
 }
 
 int player_level = 1;
-int exp_to_next_lvl = 100; // 10 zombies
+int exp_to_next_lvl = 100; 
 
 
 void checkLevelUp() {
@@ -196,7 +197,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
 
             for (int r = 0; r < MAX_REDS; r++) {
                 if (red[r].active && CheckCollisionCircles(Orcs[i].position, 29, red[r].position, 20)) {
-                    damageEnemies(&Orcs[i], 100 /*potential hard coding could happen here */);
+                    damageEnemies(&Orcs[i], 100 + 1 * player_level);
 
 
                     if (Orcs[i].HP > 0) { // makes sure orcs dont bounce when dead
@@ -210,7 +211,9 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
                 if (arrows[a].active && CheckCollisionCircles(Orcs[i].position, 40, arrows[a].position, 20)) {
                     damageEnemies(&Orcs[i], 10);
 
-                    arrows[a].active = false;
+                    if (arrow_pierce == false) {
+                        arrows[a].active = false;
+                    }
                 }
 
             }
@@ -267,7 +270,6 @@ void spawnZombies(enemies Zombie[], Vector2 position, Vector2 direction, int zom
 void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, Projectile arrows[], Red red[], Player player_one, int zombiesToSpawn, int *spawnedZombies) {
     for ( int i = 0; i < MAX_ZOMBIES; i++) {
         if (Zombie[i].active) {
-            //logic about zombie movement etc
             Vector2 direction = Vector2Subtract(playerPosition, Zombie[i].position);
 
             Vector2 normalizedDirection = Vector2Normalize(direction);
@@ -291,7 +293,7 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
             for (int j = 0; j < MAX_ZOMBIES; j++) {
                 if (i != j) {
                     if (CheckCollisionCircles(Zombie[i].position, 10, Zombie[j].position, 10)) { //self collision (kinda works)
-                        Vector2 direction = Vector2Subtract(Zombie[i].position, Zombie[i].position);
+                        Vector2 direction = Vector2Subtract(Zombie[i].position, Zombie[j].position);
                         float distance = Vector2Length(direction);
 
                         if (distance > 0){
@@ -317,9 +319,11 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
 
             for (int j = 0; j < PLAYER_MAX_ARROWS; j++) {
                 if (arrows[j].active && CheckCollisionCircles(Zombie[i].position, 20, arrows[j].position, 5)) {
-                    damageEnemies(&Zombie[i], 20 + 1.5 * player_level);
+                    damageEnemies(&Zombie[i], 20 + 1.01 * player_level);
 
-                    arrows[j].active = false;
+                    if (arrow_pierce == false) {
+                        arrows[j].active = false;
+                    }
                 }
             }
 
@@ -541,7 +545,7 @@ int main() {
     double dodgeDuration = 0.2;
 
     // attack logics
-    float meleeDuration = 0.5f;
+    float meleeDuration = 0.016f;
 
     // ability defines
     Color ManaBarColor = {201, 0, 20, 100};
@@ -572,6 +576,14 @@ int main() {
         Vector2 MeleeDirection = Vector2Normalize(Vector2Subtract(mousePosition, player_one.position));
         double total_runtime = GetTime();
 
+        if (player_level >= 10) {
+            arrow_pierce = true;
+        }
+
+        if (player_level >= 20) {
+            //future player power ups, didnt have time
+        }
+
         if (total_runtime >= 1 && lastSpawnTime < 1) {
             zombiesToSpawn = 5;
             
@@ -581,7 +593,7 @@ int main() {
 
         if (total_runtime >= 10 && lastSpawnTime < 10) {
 
-            zombiesToSpawn = 15; // only spawns 15 but doesnt allow 15 to be respawned
+            zombiesToSpawn = 15;
             orcs_to_spawn = 1;
 
             spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
@@ -597,9 +609,6 @@ int main() {
             spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
 
             lastSpawnTime = total_runtime;
-            // enable red
-            // max zombie -> 25
-            // orcs -> 3
         }
 
         if (total_runtime >= 120) {
@@ -608,10 +617,11 @@ int main() {
 
             spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
             spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
+            lastSpawnTime = total_runtime;
 
         }
 
-        if (total_runtime >= 150) {
+        if (total_runtime >= 150 && lastSpawnTime < 150) {
             zombiesToSpawn = 75;
             orcs_to_spawn = 15;
             // disable melee
@@ -619,13 +629,14 @@ int main() {
             spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
         }
 
-        if (total_runtime >= 240) {
+        if (total_runtime >= 240 && lastSpawnTime < 240) {
             zombiesToSpawn = 100;
             orcs_to_spawn = 20;
             melee_active = true;
 
             spawnOrc(Orcs, player_one.position, Vector2Zero(), orcs_to_spawn, &spawnedOrcs);
             spawnZombies(Zombie, player_one.position, Vector2Zero(), zombiesToSpawn, &spawnedZombies);
+            lastSpawnTime = total_runtime;
         }
 
 
@@ -730,6 +741,20 @@ int main() {
                 
                 if (currentTime >= last_damage_tick + damageCooldown) {
                     player_one.HP -= 5;
+                    last_damage_tick = currentTime;
+                } 
+                
+                if (player_one.HP <= 0) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        for (int i = 0; i < MAX_ORCS; i++) {
+            if (Orcs[i].active && CheckCollisionCircles(Orcs[i].position, 40, player_one.position, 12)) {
+                
+                if (currentTime >= last_damage_tick + damageCooldown) {
+                    player_one.HP -= 20;
                     last_damage_tick = currentTime;
                 } 
                 
