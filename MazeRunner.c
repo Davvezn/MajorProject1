@@ -21,6 +21,8 @@ int orcs_to_spawn = 0;
 int spawnedOrcs = 0;
 bool melee_active = false;
 bool arrow_pierce = false;
+int score = 0;
+
 
 #define WINDOWWIDTH 800
 #define WINDOWHEIGHT 600
@@ -226,6 +228,7 @@ void updateOrcs(enemies Orcs[],Vector2 playerPosition, Player player_one, Red re
             if (Orcs[i].HP <= 0) {
                 Orcs[i].active = false;
                 (*spawnedOrcs)--;
+                score += 100;
             }
         }
     }
@@ -336,6 +339,7 @@ void updateZombies(enemies Zombie[], Vector2 playerPosition, float zombieSpeed, 
             if (Zombie[i].HP <= 0) {
                 Zombie[i].active = false;
                 (*spawnedZombies)--;
+                score += 10;
             }
 
         }
@@ -780,6 +784,7 @@ int main() {
             DrawRectangle(10, 10,400,40, back_ground_bar);
             DrawRectangle(10, 10, (int)(400 * healthPrecent), 40, hp_bar_color);
             DrawText(TextFormat("Total Exp Earned: %d", total_exp_earn), 10, 100, 20, WHITE);
+            DrawText(TextFormat("Score: %d", score), WINDOWWIDTH - 120, 12, 20, WHITE);
             DrawText(TextFormat("Current Level: %d", player_level), 10, 120, 20, WHITE);
             DrawText(TextFormat("Total Runtime: %.2f seconds", total_runtime), WINDOWWIDTH/2 - 40, WINDOWHEIGHT - 12, 12, WHITE);
         }
